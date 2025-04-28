@@ -1,7 +1,11 @@
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 #include "HashTable.h"
+#include "boolean.h"
+#include "confirm.h"
 
-define INITIAL_CAPACITY 101  // default initial capacity for HashTable
+#define INITIAL_CAPACITY 101  // default initial capacity for HashTable
 
 /* Crea un HashTable, devuelve el puntero a la estructura creada*/
 HashTable HTCreate() {
@@ -49,7 +53,25 @@ long _stringLong(char* clave) {
 	int potencia = pow(27,2) // potencia = 27^2
 
 	*/
-	return 0l;
+    unsigned long hashValue = 0;
+    size_t len = strlen(clave);
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = clave[i];
+        unsigned long val;
+
+        if (c >= '0' && c <= '9') {
+            val = (c - '0') + 1;
+        } else if (c >= 'A' && c <= 'Z') {
+            val = (c - 'A') + 11;
+        } else if (c >= 'a' && c <= 'z') {
+            val = (c - 'a') + 11;
+        } else {
+            val = 0;  // we'll just ignore unsupported characters
+        }
+
+        hashValue += (val * (unsigned long) pow(27, (len - i - 1)));
+    }
+    return hashValue;
 }
 
 /*
