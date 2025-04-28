@@ -5,7 +5,7 @@
 #include "boolean.h"
 #include "confirm.h"
 
-#define INITIAL_CAPACITY 101  // default initial capacity for HashTable
+#define INITIAL_CAPACITY 257  // default initial capacity for HashTable (Prime Number)
 
 /* Crea un HashTable, devuelve el puntero a la estructura creada*/
 HashTable HTCreate() {
@@ -53,7 +53,7 @@ long _stringLong(char* clave) {
 	int potencia = pow(27,2) // potencia = 27^2
 
 	*/
-    unsigned long hashValue = 0;
+    unsigned long value = 0;
     size_t len = strlen(clave);
     for (size_t i = 0; i < len; i++) {
         unsigned char c = clave[i];
@@ -69,9 +69,9 @@ long _stringLong(char* clave) {
             val = 0;  // we'll just ignore unsupported characters
         }
 
-        hashValue += (val * (unsigned long) pow(27, (len - i - 1)));
+        value += (val * (unsigned long) pow(27, (len - i - 1)));
     }
-    return hashValue;
+    return (long) value;
 }
 
 /*
@@ -81,9 +81,11 @@ sea i el numero de intento y clave la clave usada.
 aplicar la formula:
 hash(x,i) = ((stringInt(x) mod CAP) + i^2) mod CAP
 */
-
-int _hash(char* clave, int i) {
-	return 0;
+int _hash(HashTable hash_table, char* clave, int i) {
+	// to avoid negatives, we use unsigned long for the hash generation
+    unsigned long initial_position = (unsigned long)_stringLong(clave) % hash_table->cap;
+    unsigned long offset = (unsigned long)(i * i);
+    return (int)((initial_position + offset) % hash_table->cap);
 }
 
 
