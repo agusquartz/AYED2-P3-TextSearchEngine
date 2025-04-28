@@ -1,11 +1,22 @@
 #include <stdlib.h>
 #include "HashTable.h"
 
+define INITIAL_CAPACITY 101  // default initial capacity for HashTable
 
 /* Crea un HashTable, devuelve el puntero a la estructura creada*/
 HashTable HTCreate() {
-	/*AGREGUE SU CODIGO AQUI*/
-	return NULL;
+    _HashTable* table = malloc(sizeof(_HashTable));
+    CONFIRM_RETVAL(table != NULL, NULL);
+
+    table->cap = INITIAL_CAPACITY;
+    table->tam = 0;
+    table->arr = calloc(INITIAL_CAPACITY, sizeof(Celda*));
+    if (table->arr == NULL) {
+        free(table);
+        return NULL;
+    }
+
+    return table;
 }
 
 /**
