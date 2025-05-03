@@ -4,6 +4,9 @@
 #include <string.h>
 #include "confirm.h"
 #include "HashTable.h"
+
+FILE* open_file(const char* path);
+void print_lines(FILE* file, int start_line, int end_line);
 /* Implementado una vez por programa para establecer como manejar errores */
 extern void GlobalReportarError(char* pszFile, int  iLine) {
 
@@ -20,6 +23,10 @@ extern void GlobalReportarError(char* pszFile, int  iLine) {
 /*programa de prueba, implemente su codigo del proyecto 3 aqui*/
 
 int main(int argc, char** argv) {
+	if (argc < 2) {
+        printf("Usage: %s <file1> <file2> ... <fileN>\n", argv[0]);
+        return 1;
+    }
 
 	/*ejemplo de uso*/
 	HashTable d = HTCreate();
@@ -34,6 +41,20 @@ int main(int argc, char** argv) {
 	//CONFIRM_RETURN(1 == 0);
 	HTDestroy(d);
 	system("PAUSE");
+
+	int i;
+	for (i = 1; i < argc; i++) {
+        const char* filepath = argv[i];
+        FILE* file = open_file(filepath);
+        if (file) {
+            printf("Successfully opened file: %s\n", filepath);
+            fclose(file); // Close the file after opening
+        } else {
+            printf("Failed to open file: %s\n", filepath);
+        }
+    }
+
+
 
 	return (EXIT_SUCCESS);
 }

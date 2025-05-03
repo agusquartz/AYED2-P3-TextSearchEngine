@@ -1,11 +1,12 @@
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 #include "HashTable.h"
 #include "boolean.h"
 #include "confirm.h"
 
 #define INITIAL_CAPACITY 257  // default initial capacity for HashTable (Prime Number)
+#define REHASH_THRESHOLD 0.7  // load factor threshold to trigger resize
+#define TOMBSTONE ((Celda*)-1)
 
 /* Crea un HashTable, devuelve el puntero a la estructura creada*/
 HashTable HTCreate() {
@@ -14,118 +15,214 @@ HashTable HTCreate() {
 
     table->cap = INITIAL_CAPACITY;
     table->tam = 0;
-    table->arr = calloc(INITIAL_CAPACITY, sizeof(Celda*));
-    if (table->arr == NULL) {
-        free(table);
-        return NULL;
-    }
+    table->arr = calloc(table->cap, sizeof(Celda*));
+    CONFIRM_RETVAL(table->arr != NULL, NULL);
 
     return table;
 }
 
 /**
+ * Resize the table when load factor exceeds threshold.
+ */
+static BOOLEAN _resize(HashTable p) {
+    int oldCap = p->cap;
+    int newCap = oldCap * 2 + 1;
+    Celda** oldArr = p->arr;
+    int oldSize = p->tam;
+
+    Celda** newArr = calloc(newCap, sizeof(Celda*));
+    CONFIRM_RETVAL(newArr != NULL, FALSE);
+
+    p->arr = newArr;
+    p->cap = newCap;
+    p->tam = 0;
+    
+    // reinsert existing entries
+    int idx;
+    for (idx = 0; idx < oldCap; idx++) {
+        Celda* cell = oldArr[idx];
+        if (cell != NULL && cell != TOMBSTONE) {
+            // Insert into new table with same key and value
+            BOOLEAN result = HTPut(p, cell->clave, cell->valor);
+            
+            // Clean up old cell
+            free(cell->clave);
+            free(cell);
+            
+            if (!result) {
+                // Restore old state on failure
+                free(p->arr);
+                p->arr = oldArr;
+                p->cap = oldCap;
+                p->tam = oldSize;
+                return FALSE;
+            }
+        } else if (cell == TOMBSTONE) {
+            // we'll just skip tombstones
+        }
+    }
+    free(oldArr);
+    
+    return TRUE;
+}
+
+/**
 funcion privada de ayuda
 Devuelve un numero entero grande (long) correspondiente a la clave pasada
-por ejemplo pueden utilizar:
-_stringLong("ABC") = 11*27^2 + 12*27^1 + 13*27^0 = 8356
-_stringLong("09A") = 1*27^2  + 10*27^1 +  11*27^0 = 1010
-
-o sino algo como
-_stringLong("ABC") = 65*10000 + 66*100 + 67 = 656667
-
 */
 long _stringLong(char* clave) {
-	/*AYUDA SOBRE STRINGS
-	Tabla de conversion de caracteres validos
-	caracteres       valor ascii
-	A-Z ... a-z   =  65 al 122
-	0-9           =  48 al 59
-
-	Ejemplos
-	para saber el valor ascii de un caracter
-	char* a = "ABC";
-	int x = a[0] // a = 65
-
-	para saber el tamanho del string
-	int tam = strlen(a); // tam = 3
-
-	AYUDA PARA CALCULOS MATEMATICOS
-	int potencia = pow(27,2) // potencia = 27^2
-
-	*/
     unsigned long value = 0;
     size_t len = strlen(clave);
-    for (size_t i = 0; i < len; i++) {
+    if (len == 0) return 0;  // empty string
+
+    // compute initial power = 27^(len-1)
+    unsigned long power = 1;
+    size_t i;
+    for (i = 1; i < len; i++) {
+        power *= 27;
+    }
+    for (i = 0; i < len; i++) {
         unsigned char c = clave[i];
         unsigned long val;
-
-        if (c >= '0' && c <= '9') {
-            val = (c - '0') + 1;
-        } else if (c >= 'A' && c <= 'Z') {
-            val = (c - 'A') + 11;
-        } else if (c >= 'a' && c <= 'z') {
-            val = (c - 'a') + 11;
-        } else {
-            val = 0;  // we'll just ignore unsupported characters
-        }
-
-        value += (val * (unsigned long) pow(27, (len - i - 1)));
+        if (c >= '0' && c <= '9') val = (c - '0') + 1;
+        else if (c >= 'A' && c <= 'Z') val = (c - 'A') + 11;
+        else if (c >= 'a' && c <= 'z') val = (c - 'a') + 11;
+        else val = 0;
+        value += val * power;
+        power /= 27;
     }
-    return (long) value;
+    return (long)value;
 }
 
 /*
 funcion privada de ayuda
 devuelve el hash para cada intento de insercion/busqueda
-sea i el numero de intento y clave la clave usada.
-aplicar la formula:
-hash(x,i) = ((stringInt(x) mod CAP) + i^2) mod CAP
 */
 int _hash(HashTable hash_table, char* clave, int i) {
-	// to avoid negatives, we use unsigned long for the hash generation
-    unsigned long initial_position = (unsigned long)_stringLong(clave) % hash_table->cap;
-    unsigned long offset = (unsigned long)(i * i);
-    return (int)((initial_position + offset) % hash_table->cap);
+    // to avoid negatives, we use unsigned long for the hash generation
+    unsigned long key = (unsigned long)_stringLong(clave);
+    int current_capacity = hash_table->cap;
+
+    unsigned long initial_position = key % current_capacity;
+    unsigned long offset = (unsigned long)i * i;
+    return (int)((initial_position + offset) % current_capacity);
 }
 
-
-
-
-/* Agrega el valor con la clave dada en el hash table, en el caso de repetir la clave se sobreescriben los datos
-Devuelve TRUE si tuvo exito, sino FALSE*/
+/* Agrega el valor con la clave dada en el hash table */
 BOOLEAN HTPut(HashTable p, char* clave, void* valor) {
-	/*AGREGUE SU CODIGO AQUI*/
-	return FALSE;
+    CONFIRM_RETVAL(p != NULL && clave != NULL, FALSE);
+
+    // resize if load factor exceeded
+    double load = (double)(p->tam + 1) / p->cap;
+    if (load > REHASH_THRESHOLD) {
+        CONFIRM_RETVAL(_resize(p), FALSE);
+    }
+
+    // probe to find slot or existing key
+    int firstTombstone = -1;
+    int i;
+    for (i = 0; i < p->cap; i++) {
+        int idx = _hash(p, clave, i);
+        Celda* cell = p->arr[idx];
+
+        if (cell == TOMBSTONE) {
+            if (firstTombstone < 0) {
+                firstTombstone = idx;  // remember first tombstone
+            }
+        } else if (cell == NULL) {
+            int insertIdx = (firstTombstone >= 0 ? firstTombstone : idx);
+
+            // insert new cell
+            Celda* newCell = malloc(sizeof(Celda));
+            CONFIRM_RETVAL(newCell != NULL, FALSE);
+
+            newCell->clave = strdup(clave);
+            CONFIRM_RETVAL(newCell->clave != NULL, FALSE);
+
+            newCell->valor = valor;
+            p->arr[insertIdx] = newCell;
+            p->tam++;
+
+            return TRUE;
+        } else if (strcmp(cell->clave, clave) == 0) {
+            /* update existing */
+            cell->valor = valor;
+            return TRUE;
+        }
+    }
+    return FALSE;  // table full (shouldn't happen after resize)
 }
 
-/* Obtiene el valor asociado a la clave dentro del HashTable y lo pasa por referencia a retval
-Devuelve TRUE si tuvo exito, sino FALSE*/
+/* Obtiene el valor asociado a la clave dentro del HashTable */
 BOOLEAN HTGet(HashTable p, char* clave, void** retval) {
-	/*AGREGUE SU CODIGO AQUI*/
-	return FALSE;
+    CONFIRM_RETVAL(p != NULL && clave != NULL && retval != NULL, FALSE);
+
+    int i;
+    for (i = 0; i < p->cap; i++) {
+        int idx = _hash(p, clave, i);
+        Celda* cell = p->arr[idx];
+
+        if (cell == NULL) return FALSE;
+
+        if (cell != TOMBSTONE && strcmp(cell->clave, clave) == 0) {
+            *retval = cell->valor;
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
-/* Remueve el valor asociado a la clave pasada
-Devuelve TRUE si tuvo exito, sino FALSE*/
+/* Remueve el valor asociado a la clave pasada */
 BOOLEAN HTRemove(HashTable p, char* clave) {
-	/*AGREGUE SU CODIGO AQUI*/
-	return FALSE;
+    CONFIRM_RETVAL(p != NULL && clave != NULL, FALSE);
+    
+    int i;
+    for (i = 0; i < p->cap; i++) {
+        int idx = _hash(p, clave, i);
+
+        Celda* cell = p->arr[idx];
+        if (cell == NULL) break;
+
+        if (cell != TOMBSTONE && strcmp(cell->clave, clave) == 0) {
+            // Free the cell and mark as tombstone
+            free(cell->clave);
+            free(cell);
+            p->arr[idx] = TOMBSTONE;
+            p->tam--;
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 /* Devuelve TRUE si el HashTable contiene la clave*/
 BOOLEAN HTContains(HashTable p, char* clave) {
-	/*AGREGUE SU CODIGO AQUI*/
-	return FALSE;
+    void* tmp;
+    return HTGet(p, clave, &tmp);
 }
 
-/* Devuelve la cantidad de elementos (tamanho) cargados en el HashTable*/
+// Devuelve la cantidad de elementos (tamanho) cargados en el HashTable
 BOOLEAN HTSize(HashTable p) {
-	/*AGREGUE SU CODIGO AQUI*/
-	return FALSE;
+    CONFIRM_RETVAL(p != NULL, 0);
+    return p->tam;
 }
 
 /* Destruye la estructura*/
 BOOLEAN HTDestroy(HashTable p) {
-	/*AGREGUE SU CODIGO AQUI*/
-	return FALSE;
+    CONFIRM_RETVAL(p != NULL, FALSE);
+
+    int i;
+    for (i = 0; i < p->cap; i++) {
+        Celda* cell = p->arr[i];
+        if (cell != NULL && cell != TOMBSTONE) {
+            free(cell->clave);
+            free(cell);
+        } else if (cell == TOMBSTONE) {
+            // Don't need to free anything for tombstones, so just skip them
+        }
+    }
+
+    free(p->arr);
+    free(p);
+    return TRUE;
 }
