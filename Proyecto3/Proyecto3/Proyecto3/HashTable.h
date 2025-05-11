@@ -1,6 +1,12 @@
 #ifndef DEFINE_HASHTABLE_H
 #define DEFINE_HASHTABLE_H
 #include "boolean.h"
+
+#define INITIAL_CAPACITY 257  // default initial capacity for HashTable (Prime Number)
+#define REHASH_THRESHOLD 0.7  // load factor threshold to trigger resize
+#define TOMBSTONE ((Celda*)-1)
+
+
 /*
  Copyright (c) 2017. Universidad Nacional de Itapua.
  

@@ -7,7 +7,7 @@
  #define OCCURRENCE_H
  
  #include <stdlib.h>
- #include "ArrayList/arraylist.h"
+ #include "../ArrayList/arraylist.h"
  
  /**
   * Represents a single occurrence of a word in a document

@@ -127,4 +127,7 @@ int arraylist_ensure_capacity(ArrayList* list, size_t min_capacity);
  */
 int arraylist_trim_to_size(ArrayList* list);
 
+typedef int (*Comparator)(const void* a, const void* b);
+void arraylist_sort(ArrayList* list, Comparator cmp);
+
 #endif /* ARRAYLIST_H */

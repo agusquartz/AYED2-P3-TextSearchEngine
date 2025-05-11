@@ -1,14 +1,35 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "FileManager.h"
+
+#define BOOKS_PATH "libros/"
 
 FILE* open_file(const char* path) {
-    FILE* file = fopen(path, "r");
-
-    if (!file) {
-        perror("Error opening file");
+    // Buffer para la ruta completa: libros/ + path + '\0'
+    size_t len_prefix = strlen(BOOKS_PATH);
+    size_t len_path   = strlen(path);
+    char* fullpath    = malloc(len_prefix + len_path + 1);
+    if (!fullpath) {
+        perror("Error allocating memory for full path");
         return NULL;
     }
-    
+
+    // Construir la ruta completa
+    memcpy(fullpath, BOOKS_PATH, len_prefix);
+    memcpy(fullpath + len_prefix, path,      len_path);
+    fullpath[len_prefix + len_path] = '\0';
+
+    // Intentar abrir
+    FILE* file = fopen(fullpath, "r");
+    if (!file) {
+        perror(fullpath);
+        free(fullpath);
+        return NULL;
+    }
+
+    free(fullpath);
     return file;
 }
 

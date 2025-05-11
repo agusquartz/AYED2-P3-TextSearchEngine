@@ -4,10 +4,6 @@
 #include "boolean.h"
 #include "confirm.h"
 
-#define INITIAL_CAPACITY 257  // default initial capacity for HashTable (Prime Number)
-#define REHASH_THRESHOLD 0.7  // load factor threshold to trigger resize
-#define TOMBSTONE ((Celda*)-1)
-
 /* Crea un HashTable, devuelve el puntero a la estructura creada*/
 HashTable HTCreate() {
     _HashTable* table = malloc(sizeof(_HashTable));

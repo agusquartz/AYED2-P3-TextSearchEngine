@@ -12,6 +12,40 @@
 /* Growth factor when resizing */
 #define GROWTH_FACTOR 2
 
+static void merge(void **arr, void **tmp, int left, int mid, int right, Comparator cmp) {
+    int i = left, j = mid + 1, k = left;
+    while (i <= mid && j <= right) {
+        if (cmp(arr[i], arr[j]) <= 0) {
+            tmp[k++] = arr[i++];
+        } else {
+            tmp[k++] = arr[j++];
+        }
+    }
+    while (i <= mid) tmp[k++] = arr[i++];
+    while (j <= right) tmp[k++] = arr[j++];
+    // copiar de vuelta
+    for (i = left; i <= right; ++i) {
+        arr[i] = tmp[i];
+    }
+}
+
+static void mergesort_rec(void **arr, void **tmp, int left, int right, Comparator cmp) {
+    if (left >= right) return;
+    int mid = left + (right - left) / 2;
+    mergesort_rec(arr, tmp, left, mid, cmp);
+    mergesort_rec(arr, tmp, mid + 1, right, cmp);
+    merge(arr, tmp, left, mid, right, cmp);
+}
+
+void arraylist_sort(ArrayList* list, Comparator cmp) {
+    if (!list || list->size < 2) return;
+    // arreglo auxiliar
+    void **tmp = malloc(sizeof(void*) * list->size);
+    if (!tmp) return;  // en caso de fallo de malloc, no ordenar
+    mergesort_rec(list->data, tmp, 0, list->size - 1, cmp);
+    free(tmp);
+}
+
 /**
  * @brief Create a new ArrayList with the specified capacity
  */
