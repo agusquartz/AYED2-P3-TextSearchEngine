@@ -16,6 +16,16 @@ extern void GlobalReportarError(char* pszFile, int  iLine) {
 
 }
 
+void print_all_keys(_HashTable* ht) {
+    // Recorremos todas las posiciones del array
+    for (int i = 0; i < ht->cap; ++i) {
+        Celda* cel = ht->arr[i];
+        if (cel != NULL && cel->clave != NULL) {
+            printf("Clave en índice %d: %s\n", i, cel->clave);
+        }
+    }
+}
+
 int main() {
     // Create inverted index
     printf("Creando índice invertido...\n");
@@ -40,9 +50,17 @@ int main() {
     }
     printf("Loaded '%s' as document ID %d\n", filename, file_id);
 
+
+    print_all_keys(idx->table);
+
+
+
+
     // Define search terms
     // char* terms[] = {"quijote", "donn", "sancho"};
-    char* terms[] = {"don", "Quijote"};
+    char term0[] = "escribano";
+    char term1[] = "Consejo";
+    char* terms[] = { term0, term1 };
     int term_count = sizeof(terms) / sizeof(terms[0]);
 
     // Search index
@@ -67,6 +85,7 @@ int main() {
         }
     }
 
+    
     // Clean up
     free(results);
     II_Destroy(idx);

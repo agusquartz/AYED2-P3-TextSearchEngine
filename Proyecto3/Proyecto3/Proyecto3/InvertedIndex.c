@@ -106,6 +106,8 @@
         printf("Cargando archivo id=%d…\n", id);
         int ch;
         while ((ch = fgetc(f)) != EOF) {
+            long pos = ftell(f) - 1;
+
             if (isalpha(ch)) {
                 if (word_start < 0) word_start = pos;
             } else {
@@ -115,10 +117,11 @@
                     fseek(f, word_start, SEEK_SET);
                     fread(word, 1, len, f);
                     word[len] = '\0';
+
                     for (long i = 0; i < len; ++i) word[i] = tolower((unsigned char)word[i]);
                     add_word_occurrence(idx, word, id, word_start);
                     free(word);
-                    fseek(f, pos, SEEK_SET);
+                    fseek(f, pos + 1, SEEK_SET);
                 }
                 word_start = -1;
             }
@@ -127,7 +130,18 @@
         return id;
     }
 
+    void normalize_words(char* words[], int word_count) {
+        for (int w = 0; w < word_count; ++w) {
+            char *word = words[w];
+            size_t len = strlen(word);
+            for (size_t i = 0; i < len; ++i) {
+                word[i] = tolower((unsigned char)word[i]);
+            }
+        }
+    }
+        
     printData* II_Search(InvertedIndex* idx, char* words[], int word_count, int* out_count) {
+        normalize_words(words, word_count);
         // retrieve lists
         OccurrenceList** lists = malloc(sizeof(*lists) * word_count);
         for (int i = 0; i < word_count; ++i) {
