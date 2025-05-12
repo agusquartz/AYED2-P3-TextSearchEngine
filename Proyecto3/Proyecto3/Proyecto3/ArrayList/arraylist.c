@@ -4,6 +4,8 @@
  */
 
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "arraylist.h"
 
 /* Default initial capacity if not specified */

@@ -18,13 +18,19 @@ extern void GlobalReportarError(char* pszFile, int  iLine) {
 
 int main() {
     // Create inverted index
+    printf("Creando índice invertido...\n");
     InvertedIndex* idx = II_Create();
     if (!idx) {
-        fprintf(stderr, "Failed to create InvertedIndex\n");
+        fprintf(stderr, "II_Create devolvió NULL\n");
+        return EXIT_FAILURE;
+    }
+    if (!idx->table) {
+        fprintf(stderr, "idx->table es NULL\n");
         return EXIT_FAILURE;
     }
 
     // Load DonQuijote.txt (placed under libros/DonQuijote.txt)
+    printf("Cargando archivo DonQuijote.txt...\n");
     const char* filename = "DonQuijote.txt";
     int file_id = II_LoadFile(idx, filename);
     if (file_id < 0) {
@@ -35,7 +41,8 @@ int main() {
     printf("Loaded '%s' as document ID %d\n", filename, file_id);
 
     // Define search terms
-    char* terms[] = {"quijote", "donn", "sancho"};
+    // char* terms[] = {"quijote", "donn", "sancho"};
+    char* terms[] = {"don", "Quijote"};
     int term_count = sizeof(terms) / sizeof(terms[0]);
 
     // Search index
